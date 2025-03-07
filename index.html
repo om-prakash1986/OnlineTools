@@ -1,10 +1,3 @@
-@model OnlineTools.Models.ImageResizerModel
-
-@{
-    ViewBag.Title = "Free Online Image Resizer - Resize Images Easily";
-    ViewBag.Description = "Free online image resizer tool. Easily resize, compress and convert your images while maintaining quality. Support for JPG, PNG, and GIF formats.";
-}
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -14,16 +7,16 @@
     <meta name="keywords" content="image resizer, resize image online, free image resizer, photo resizer, picture resize tool, compress image">
     <meta name="author" content="OnlineTools">
     <meta name="robots" content="index, follow">
-    <meta property="og:title" content="@ViewBag.Title">
+    <meta property="og:title" content="Free Online Image Resizer - Resize Images Easily">
     <meta property="og:description" content="Free online image resizer tool. Easily resize, compress and convert your images while maintaining quality.">
     <meta property="og:type" content="website">
-    <meta property="og:url" content="@Request.Url.AbsoluteUri">
+    <meta property="og:url" content="https://your-domain.com/image-resizer">
     <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="@ViewBag.Title">
+    <meta name="twitter:title" content="Free Online Image Resizer - Resize Images Easily">
     <meta name="twitter:description" content="Free online image resizer tool. Easily resize, compress and convert your images.">
-    <link rel="canonical" href="@Request.Url.AbsoluteUri" />
+    <link rel="canonical" href="https://your-domain.com/image-resizer" />
     
-    <title>@ViewBag.Title</title>
+    <title>Free Online Image Resizer - Resize Images Easily</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
@@ -203,15 +196,12 @@
 
                 <div class="card shadow-lg">
                     <div class="card-body p-4">
-                        @using (Html.BeginForm("Resize", "ImageResizer", FormMethod.Post, new { enctype = "multipart/form-data", @class = "needs-validation" }))
-                        {
-                            @Html.ValidationSummary(true, "", new { @class = "alert alert-danger" })
-                            
+                        <form id="resizeForm" class="needs-validation" novalidate>
                             <div class="upload-area mb-4 text-center p-4 border-2 border-dashed rounded-3" id="dropZone">
                                 <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
                                 <div class="mb-3">
                                     <label class="form-label fw-bold">Upload Image</label>
-                                    @Html.TextBoxFor(m => m.ImageFile, new { type = "file", accept = "image/*", @class = "form-control d-none", id = "imageInput" })
+                                    <input type="file" id="imageInput" class="form-control d-none" accept="image/*" required>
                                     <div class="mt-2">
                                         <button type="button" class="btn btn-outline-primary btn-lg" onclick="document.getElementById('imageInput').click()">
                                             <i class="fas fa-image me-2"></i>Choose Image
@@ -219,7 +209,7 @@
                                     </div>
                                 </div>
                                 <p class="text-muted small">Supported formats: JPEG, PNG, GIF</p>
-                                @Html.ValidationMessageFor(m => m.ImageFile, "", new { @class = "text-danger" })
+                                <div class="invalid-feedback">Please select an image file.</div>
                                 
                                 <div id="imagePreview" class="mt-3 d-none">
                                     <img src="" alt="Preview" class="img-fluid rounded shadow-sm" style="max-height: 200px"/>
@@ -232,22 +222,22 @@
                             <div class="row g-3 mb-4">
                                 <div class="col-md-6">
                                     <div class="form-floating">
-                                        @Html.TextBoxFor(m => m.Width, new { @class = "form-control", type = "number", min = "1", max = "10000", placeholder = "Width" })
+                                        <input type="number" class="form-control" id="width" placeholder="Width" min="1" max="10000" required>
                                         <label>Width (px)</label>
-                                        @Html.ValidationMessageFor(m => m.Width, "", new { @class = "text-danger small" })
+                                        <div class="invalid-feedback">Please enter a valid width between 1 and 10000 pixels.</div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-floating">
-                                        @Html.TextBoxFor(m => m.Height, new { @class = "form-control", type = "number", min = "1", max = "10000", placeholder = "Height" })
+                                        <input type="number" class="form-control" id="height" placeholder="Height" min="1" max="10000" required>
                                         <label>Height (px)</label>
-                                        @Html.ValidationMessageFor(m => m.Height, "", new { @class = "text-danger small" })
+                                        <div class="invalid-feedback">Please enter a valid height between 1 and 10000 pixels.</div>
                                     </div>
                                 </div>
                             </div>
 
                             <div class="form-check form-switch mb-4">
-                                @Html.CheckBoxFor(m => m.MaintainAspectRatio, new { @class = "form-check-input", role = "switch" })
+                                <input class="form-check-input" type="checkbox" id="maintainAspectRatio" role="switch">
                                 <label class="form-check-label">Maintain Aspect Ratio</label>
                             </div>
 
@@ -256,24 +246,21 @@
                                     <i class="fas fa-crop-alt me-2"></i>Resize Image
                                 </button>
                             </div>
-                        }
+                        </form>
 
-                        @if (!string.IsNullOrEmpty(Model.ResizedImagePath))
-                        {
-                            <div class="result-section mt-5">
-                                <h4 class="text-center mb-4">Resized Image</h4>
-                                <div class="text-center">
-                                    <div class="position-relative d-inline-block">
-                                        <img src="@Model.ResizedImagePath" class="img-fluid rounded shadow" alt="Resized Image" />
-                                        <div class="position-absolute bottom-0 start-50 translate-middle-x mb-3">
-                                            <a href="@Model.ResizedImagePath" class="btn btn-success btn-lg" download>
-                                                <i class="fas fa-download me-2"></i>Download
-                                            </a>
-                                        </div>
+                        <div id="resultSection" class="mt-5 d-none">
+                            <h4 class="text-center mb-4">Resized Image</h4>
+                            <div class="text-center">
+                                <div class="position-relative d-inline-block">
+                                    <img id="resizedImage" src="" class="img-fluid rounded shadow" alt="Resized Image" />
+                                    <div class="position-absolute bottom-0 start-50 translate-middle-x mb-3">
+                                        <a id="downloadButton" href="#" class="btn btn-success btn-lg" download>
+                                            <i class="fas fa-download me-2"></i>Download
+                                        </a>
                                     </div>
                                 </div>
                             </div>
-                        }
+                        </div>
                     </div>
                 </div>
 
@@ -359,31 +346,39 @@
 
         <footer class="footer mt-4">
             <div class="d-flex justify-content-between align-items-center">
-                <p class="mb-0">&copy; @DateTime.Now.Year - Free Online Image Resizer Tool</p>
-                @if (ViewBag.VisitorCount != null)
-                {
-                    <div class="visitor-count">
-                        <span class="badge bg-secondary">
-                            <i class="fas fa-users me-2"></i>Total Visitors: @ViewBag.VisitorCount
-                        </span>
-                    </div>
-                }
+                <p class="mb-0">&copy; <span id="currentYear"></span> - Free Online Image Resizer Tool</p>
+                <div class="visitor-count">
+                    <span class="badge bg-secondary">
+                        <i class="fas fa-users me-2"></i>Total Visitors: <span id="visitorCount">0</span>
+                    </span>
+                </div>
             </div>
         </footer>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.3/jquery.validate.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validation-unobtrusive/3.2.12/jquery.validate.unobtrusive.min.js"></script>
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=YOUR-ADSENSE-CLIENT-ID" crossorigin="anonymous"></script>
 
     <script>
+        // Set current year in footer
+        document.getElementById('currentYear').textContent = new Date().getFullYear();
+
+        // Visitor counter using localStorage
+        let visitorCount = parseInt(localStorage.getItem('visitorCount') || '0');
+        visitorCount++;
+        localStorage.setItem('visitorCount', visitorCount);
+        document.getElementById('visitorCount').textContent = visitorCount;
+
         $(document).ready(function () {
             const dropZone = $('#dropZone');
             const imageInput = $('#imageInput');
             const imagePreview = $('#imagePreview');
             const originalDimensions = $('#originalDimensions');
+            const resizeForm = $('#resizeForm');
+            const resultSection = $('#resultSection');
+            const resizedImage = $('#resizedImage');
+            const downloadButton = $('#downloadButton');
             
             // Handle drag and drop
             dropZone.on('dragover', function(e) {
@@ -423,8 +418,8 @@
                 reader.onload = function(e) {
                     const img = new Image();
                     img.onload = function() {
-                        $('#Width').val(this.width);
-                        $('#Height').val(this.height);
+                        $('#width').val(this.width);
+                        $('#height').val(this.height);
                         originalDimensions.text(`Original: ${this.width} × ${this.height}px`);
                     }
                     img.src = e.target.result;
@@ -436,22 +431,60 @@
             
             // Handle aspect ratio
             let aspectRatio = 1;
-            $('#MaintainAspectRatio').change(function() {
+            $('#maintainAspectRatio').change(function() {
                 if ($(this).is(':checked')) {
-                    aspectRatio = $('#Width').val() / $('#Height').val();
+                    aspectRatio = $('#width').val() / $('#height').val();
                 }
             });
             
-            $('#Width').change(function() {
-                if ($('#MaintainAspectRatio').is(':checked')) {
-                    $('#Height').val(Math.round($(this).val() / aspectRatio));
+            $('#width').change(function() {
+                if ($('#maintainAspectRatio').is(':checked')) {
+                    $('#height').val(Math.round($(this).val() / aspectRatio));
                 }
             });
             
-            $('#Height').change(function() {
-                if ($('#MaintainAspectRatio').is(':checked')) {
-                    $('#Width').val(Math.round($(this).val() * aspectRatio));
+            $('#height').change(function() {
+                if ($('#maintainAspectRatio').is(':checked')) {
+                    $('#width').val(Math.round($(this).val() * aspectRatio));
                 }
+            });
+
+            // Handle form submission
+            resizeForm.on('submit', function(e) {
+                e.preventDefault();
+                
+                if (!this.checkValidity()) {
+                    e.stopPropagation();
+                    $(this).addClass('was-validated');
+                    return;
+                }
+
+                const file = imageInput[0].files[0];
+                if (!file) {
+                    alert('Please select an image file.');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        
+                        canvas.width = parseInt($('#width').val());
+                        canvas.height = parseInt($('#height').val());
+                        
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        
+                        const resizedImageUrl = canvas.toDataURL(file.type);
+                        resizedImage.attr('src', resizedImageUrl);
+                        downloadButton.attr('href', resizedImageUrl);
+                        resultSection.removeClass('d-none');
+                    }
+                    img.src = e.target.result;
+                }
+                reader.readAsDataURL(file);
             });
         });
     </script>
@@ -459,15 +492,15 @@
     <!-- Structured Data for SEO -->
     <script type="application/ld+json">
     {
-        "@@context": "http://schema.org",
-        "@@type": "WebApplication",
+        "@context": "http://schema.org",
+        "@type": "WebApplication",
         "name": "Free Online Image Resizer",
-        "url": "@Request.Url.AbsoluteUri",
+        "url": "https://your-domain.com/image-resizer",
         "description": "Free online tool to resize, compress and convert images while maintaining quality. Support for JPG, PNG, and GIF formats.",
         "applicationCategory": "Image Processing Tool",
         "operatingSystem": "All",
         "offers": {
-            "@@type": "Offer",
+            "@type": "Offer",
             "price": "0",
             "priceCurrency": "USD"
         },
