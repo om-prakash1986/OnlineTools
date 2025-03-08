@@ -215,6 +215,7 @@
                                     <img src="" alt="Preview" class="img-fluid rounded shadow-sm" style="max-height: 200px"/>
                                     <div class="mt-2">
                                         <span class="badge bg-info" id="originalDimensions"></span>
+                                        <span class="badge bg-secondary" id="originalFileSize"></span>
                                     </div>
                                 </div>
                             </div>
@@ -253,6 +254,10 @@
                             <div class="text-center">
                                 <div class="position-relative d-inline-block">
                                     <img id="resizedImage" src="" class="img-fluid rounded shadow" alt="Resized Image" />
+                                    <div class="mt-2">
+                                        <span class="badge bg-info" id="newDimensions"></span>
+                                        <span class="badge bg-secondary" id="newFileSize"></span>
+                                    </div>
                                     <div class="position-absolute bottom-0 start-50 translate-middle-x mb-3">
                                         <a id="downloadButton" href="#" class="btn btn-success btn-lg" download>
                                             <i class="fas fa-download me-2"></i>Download
@@ -370,6 +375,15 @@
         localStorage.setItem('visitorCount', visitorCount);
         document.getElementById('visitorCount').textContent = visitorCount;
 
+        // Add constants for validation
+        const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+        const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif'];
+
+        // Add error handling utility
+        function showError(message) {
+            alert(message);
+        }
+
         $(document).ready(function () {
             const dropZone = $('#dropZone');
             const imageInput = $('#imageInput');
@@ -380,76 +394,147 @@
             const resizedImage = $('#resizedImage');
             const downloadButton = $('#downloadButton');
             
-            // Handle drag and drop
+            // Validate file before processing
+            function validateFile(file) {
+                if (!file) {
+                    showError('Please select an image file.');
+                    return false;
+                }
+
+                if (!ALLOWED_TYPES.includes(file.type)) {
+                    showError('Please select a valid image file (JPEG, PNG, or GIF).');
+                    return false;
+                }
+
+                if (file.size > MAX_FILE_SIZE) {
+                    showError(`File size must be less than ${formatFileSize(MAX_FILE_SIZE)}`);
+                    return false;
+                }
+
+                return true;
+            }
+            
+            // Handle drag and drop with error handling
             dropZone.on('dragover', function(e) {
                 e.preventDefault();
+                e.stopPropagation();
                 $(this).addClass('bg-light');
             });
             
             dropZone.on('dragleave', function(e) {
                 e.preventDefault();
+                e.stopPropagation();
                 $(this).removeClass('bg-light');
             });
             
             dropZone.on('drop', function(e) {
                 e.preventDefault();
+                e.stopPropagation();
                 $(this).removeClass('bg-light');
+                
                 const files = e.originalEvent.dataTransfer.files;
                 if (files.length > 0) {
-                    imageInput[0].files = files;
-                    handleImageSelect(files[0]);
+                    const file = files[0];
+                    if (validateFile(file)) {
+                        imageInput[0].files = files;
+                        handleImageSelect(file);
+                    }
                 }
             });
             
             // Handle click upload
-            dropZone.on('click', function() {
-                imageInput.click();
-            });
-            
-            // Preview image and set dimensions
             imageInput.change(function() {
                 if (this.files && this.files[0]) {
-                    handleImageSelect(this.files[0]);
+                    const file = this.files[0];
+                    if (validateFile(file)) {
+                        handleImageSelect(file);
+                    } else {
+                        this.value = ''; // Clear the input
+                    }
                 }
             });
             
             function handleImageSelect(file) {
                 const reader = new FileReader();
+                
+                reader.onerror = function() {
+                    showError('Error reading file. Please try again.');
+                };
+                
                 reader.onload = function(e) {
                     const img = new Image();
+                    
+                    img.onerror = function() {
+                        showError('Error loading image. The file might be corrupted.');
+                    };
+                    
                     img.onload = function() {
-                        $('#width').val(this.width);
-                        $('#height').val(this.height);
-                        originalDimensions.text(`Original: ${this.width} × ${this.height}px`);
+                        try {
+                            // Validate image dimensions
+                            if (this.width === 0 || this.height === 0) {
+                                showError('Invalid image dimensions.');
+                                return;
+                            }
+                            
+                            $('#width').val(this.width);
+                            $('#height').val(this.height);
+                            originalDimensions.text(`Original: ${this.width} × ${this.height}px`);
+                            $('#originalFileSize').text(`Size: ${formatFileSize(file.size)}`);
+                            
+                            imagePreview.find('img').attr('src', e.target.result);
+                            imagePreview.removeClass('d-none');
+                            
+                            // Set initial aspect ratio
+                            aspectRatio = this.width / this.height;
+                        } catch (error) {
+                            showError('Error processing image. Please try again.');
+                            console.error('Image processing error:', error);
+                        }
                     }
+                    
                     img.src = e.target.result;
-                    imagePreview.find('img').attr('src', e.target.result);
-                    imagePreview.removeClass('d-none');
                 }
+                
                 reader.readAsDataURL(file);
             }
             
-            // Handle aspect ratio
+            // Handle aspect ratio with validation
             let aspectRatio = 1;
             $('#maintainAspectRatio').change(function() {
                 if ($(this).is(':checked')) {
-                    aspectRatio = $('#width').val() / $('#height').val();
+                    const width = parseInt($('#width').val()) || 0;
+                    const height = parseInt($('#height').val()) || 0;
+                    if (width > 0 && height > 0) {
+                        aspectRatio = width / height;
+                    }
                 }
             });
             
             $('#width').change(function() {
+                const width = parseInt($(this).val()) || 0;
+                if (width <= 0 || width > 10000) {
+                    showError('Width must be between 1 and 10000 pixels.');
+                    return;
+                }
+                
                 if ($('#maintainAspectRatio').is(':checked')) {
-                    $('#height').val(Math.round($(this).val() / aspectRatio));
+                    $('#height').val(Math.round(width / aspectRatio));
                 }
             });
             
             $('#height').change(function() {
+                const height = parseInt($(this).val()) || 0;
+                if (height <= 0 || height > 10000) {
+                    showError('Height must be between 1 and 10000 pixels.');
+                    return;
+                }
+                
                 if ($('#maintainAspectRatio').is(':checked')) {
-                    $('#width').val(Math.round($(this).val() * aspectRatio));
+                    $('#width').val(Math.round(height * aspectRatio));
                 }
             });
 
-            // Handle form submission
+            // Handle form submission with error handling
             resizeForm.on('submit', function(e) {
                 e.preventDefault();
                 
@@ -460,33 +545,81 @@
                 }
 
                 const file = imageInput[0].files[0];
-                if (!file) {
-                    alert('Please select an image file.');
+                if (!validateFile(file)) {
                     return;
                 }
 
                 const reader = new FileReader();
+                reader.onerror = function() {
+                    showError('Error reading file. Please try again.');
+                };
+                
                 reader.onload = function(e) {
                     const img = new Image();
+                    
+                    img.onerror = function() {
+                        showError('Error loading image for resizing. Please try again.');
+                    };
+                    
                     img.onload = function() {
-                        const canvas = document.createElement('canvas');
-                        const ctx = canvas.getContext('2d');
-                        
-                        canvas.width = parseInt($('#width').val());
-                        canvas.height = parseInt($('#height').val());
-                        
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        
-                        const resizedImageUrl = canvas.toDataURL(file.type);
-                        resizedImage.attr('src', resizedImageUrl);
-                        downloadButton.attr('href', resizedImageUrl);
-                        resultSection.removeClass('d-none');
+                        try {
+                            const canvas = document.createElement('canvas');
+                            const ctx = canvas.getContext('2d');
+                            
+                            const newWidth = parseInt($('#width').val());
+                            const newHeight = parseInt($('#height').val());
+                            
+                            // Validate dimensions
+                            if (newWidth <= 0 || newWidth > 10000 || newHeight <= 0 || newHeight > 10000) {
+                                showError('Invalid dimensions. Width and height must be between 1 and 10000 pixels.');
+                                return;
+                            }
+                            
+                            canvas.width = newWidth;
+                            canvas.height = newHeight;
+                            
+                            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                            
+                            const resizedImageUrl = canvas.toDataURL(file.type, 0.92); // Add quality parameter
+                            
+                            if (!resizedImageUrl.startsWith('data:image/')) {
+                                showError('Error creating resized image. Please try again.');
+                                return;
+                            }
+                            
+                            resizedImage.attr('src', resizedImageUrl);
+                            downloadButton.attr('href', resizedImageUrl);
+                            downloadButton.attr('download', `resized_${file.name}`);
+                            
+                            // Display new dimensions and file size
+                            $('#newDimensions').text(`New: ${newWidth} × ${newHeight}px`);
+                            
+                            // Calculate new file size from base64 string
+                            const base64str = resizedImageUrl.split(',')[1];
+                            const newSize = Math.ceil((base64str.length * 3) / 4);
+                            $('#newFileSize').text(`New size: ${formatFileSize(newSize)}`);
+                            
+                            resultSection.removeClass('d-none');
+                        } catch (error) {
+                            showError('Error resizing image. Please try again.');
+                            console.error('Resize error:', error);
+                        }
                     }
+                    
                     img.src = e.target.result;
                 }
+                
                 reader.readAsDataURL(file);
             });
         });
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
     </script>
 
     <!-- Structured Data for SEO -->
